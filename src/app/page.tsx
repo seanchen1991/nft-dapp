@@ -5,27 +5,22 @@ import { type Address } from "viem";
 import {
   useAccount,
   useBalance,
-  useChainId,
   usePublicClient,
   useReadContract,
-  useSwitchChain,
   useWalletClient,
 } from "wagmi";
-import { soneiumMinato } from "viem/chains";
-import NFT_ABI from "../modules/wagmi/abi/DemoNFT";
+import { sepolia } from "viem/chains";
+import NFT_ABI from "../modules/wagmi/abi/ArtyNFT";
 import styles from "./page.module.css";
 
-const nftContractAddress = "0x509020Ac6410142F3146f0CdFF25701010073b7f";
-const faucetDocs = "https://docs.soneium.org/docs/builders/tools/faucets";
+const nftContractAddress = "0x04fb34223Fb055c92eEDCf5A3988822ce0518f8F";
+const tokenURI = "https://gateway.pinata.cloud/ipfs/bafkreih34fzsbejw4swpav5zdfrpyshdzkzmitpmv3rkjmnth2o2ic57gy";
 
 export default function Home(): JSX.Element {
   const [txDetails, setTxDetails] = useState<string>("");
   const { address: walletAddress } = useAccount();
 
-  const { switchChain } = useSwitchChain();
-  const connectedId = useChainId();
-  const chainId = soneiumMinato.id;
-  const isConnectedToMinato = connectedId === soneiumMinato.id;
+  const chainId = sepolia.id;
 
   const { data: walletClient } = useWalletClient({
     chainId,
@@ -51,7 +46,7 @@ export default function Home(): JSX.Element {
   });
 
   async function mintNft(): Promise<void> {
-    if (!walletClient || !publicClient|| !walletAddress) return;
+    if (!walletClient || !publicClient || !walletAddress) return;
 
     try {
       setIsPending(true);
@@ -62,14 +57,14 @@ export default function Home(): JSX.Element {
         address: nftContractAddress as Address,
         abi: NFT_ABI,
         functionName: "safeMint",
-        args: [walletAddress],
+        args: [walletAddress, tokenURI],
       } as const;
 
       const { request } = await publicClient.simulateContract(tx);
       const hash = await walletClient.writeContract(request);
       await publicClient.waitForTransactionReceipt({ hash });
 
-      setTxDetails(`https://explorer-testnet.soneium.org/tx/${hash}`);
+      setTxDetails(`https://sepolia.etherscan.io/tx/${hash}`);
 
       await refetch();
     } catch (error) {
@@ -108,7 +103,7 @@ export default function Home(): JSX.Element {
 
       <button
         disabled={
-          isPending || !walletAddress || isBalanceZero || !isConnectedToMinato
+          isPending || !walletAddress || isBalanceZero
         }
         className={styles.buttonAction}
         onClick={mintNft}
@@ -117,48 +112,11 @@ export default function Home(): JSX.Element {
         {isPending ? "Confirming..." : "Mint NFT"}
       </button>
 
-      {txDetails && (
-        <div className={styles.txDetails}>
-          <span>🎉 Congrats! Your NFT has been minted 🐣 </span>
-          <a
-            href={txDetails}
-            target="_blank"
-            rel="noreferrer"
-            className={styles.txLink}
-          >
-            View transaction
-          </a>
-        </div>
-      )}
-
       {walletAddress && isBalanceZero && (
         <div className={styles.rowChecker}>
           <span className={styles.textError}>
             You don't have enough ETH to mint an NFT!
           </span>
-          <a
-            href={faucetDocs}
-            target="_blank"
-            rel="noreferrer"
-            className={styles.txLink}
-          >
-            ETH Faucet
-          </a>
-        </div>
-      )}
-
-      {!isConnectedToMinato && walletAddress && (
-        <div className={styles.rowChecker}>
-          <span className={styles.textError}>
-            Please connect to Soneium Minato
-          </span>
-
-          <button
-            className={styles.buttonSwitchChain}
-            onClick={() => switchChain({ chainId })}
-          >
-            Switch to Soneium Minato
-          </button>
         </div>
       )}
     </div>
